@@ -13,8 +13,16 @@ fn main() {
 
                 let mut buffer = [0; 512];
 
-                stream.read(&mut buffer).unwrap();
-                stream.write("+PONG\r\n".as_bytes()).unwrap();
+                loop {
+                    let bytes_read = stream.read(&mut buffer).unwrap();
+
+                    if bytes_read == 0 {
+                        println!("Client closed the connection");
+                        break;
+                    }
+
+                    stream.write("+PONG\r\n".as_bytes()).unwrap();
+                }
             }
             Err(e) => {
                 println!("error: {}", e);
