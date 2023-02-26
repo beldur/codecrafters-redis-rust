@@ -31,7 +31,7 @@ async fn handle_connection(mut stream: TcpStream) -> Result<()> {
     let mut buffer = BytesMut::with_capacity(512);
 
     loop {
-        let bytes_read = stream.read(&mut buffer).await?;
+        let bytes_read = stream.read_buf(&mut buffer).await?;
 
         if bytes_read == 0 {
             println!("Client closed the connection");
