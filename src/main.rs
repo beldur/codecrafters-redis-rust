@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
 }
 
 async fn handle_connection(mut stream: TcpStream) -> Result<()> {
-    let mut buffer = [0; 512];
+    let mut buffer = BytesMut::with_capacity(512);
 
     loop {
         let bytes_read = stream.read(&mut buffer).await?;
