@@ -1,7 +1,8 @@
 use anyhow::Result;
-use bytes::BytesMut;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use resp::Value::{Error, SimpleString};
 use tokio::net::{TcpListener, TcpStream};
+
+mod resp;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -27,18 +28,25 @@ async fn main() -> Result<()> {
     }
 }
 
-async fn handle_connection(mut stream: TcpStream) -> Result<()> {
-    let mut buffer = BytesMut::with_capacity(512);
+async fn handle_connection(stream: TcpStream) -> Result<()> {
+    let mut conn = resp::RespConnection::new(stream);
 
     loop {
-        let bytes_read = stream.read_buf(&mut buffer).await?;
+        let value = conn.read_value().await?;
 
-        if bytes_read == 0 {
-            println!("Client closed the connection");
+        if let Some(value) = value {
+            let (command, args) = value.to_command()?;
+            let response = match command.to_ascii_lowercase().as_ref() {
+                "ping" => SimpleString("PONG".to_string()),
+                "echo" => args.first().unwrap().clone(),
+                _ => Error(format!("Command not implemented: {}", command)),
+            };
+
+            conn.write_value(response).await?;
+        } else {
             break;
         }
-
-        stream.write("+PONG\r\n".as_bytes()).await?;
     }
+
     Ok(())
 }
