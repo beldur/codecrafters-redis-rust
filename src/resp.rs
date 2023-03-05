@@ -49,6 +49,7 @@ pub enum Value {
     BulkString(String),
     Error(String),
     Array(Vec<Value>),
+    Null,
 }
 
 impl Value {
@@ -73,7 +74,9 @@ impl Value {
 
     pub fn encode(self) -> String {
         match self {
+            Value::Null => "$-1\r\n".to_string(),
             Value::SimpleString(s) => format!("+{}\r\n", s),
+            Value::Error(msg) => format!("-{}\r\n", msg),
             Value::BulkString(s) => format!("${}\r\n{}\r\n", s.chars().count(), s),
             _ => panic!("Value encode not implemented for {:?}", self),
         }
@@ -90,7 +93,13 @@ fn parse_message(buffer: BytesMut) -> Result<Option<(Value, usize)>> {
 }
 
 fn decode_simple_string(buffer: BytesMut) -> Result<Option<(Value, usize)>> {
-    Ok(None)
+    if let Some((line, len)) = read_until_crlf(&buffer[1..]) {
+        let str = parse_string(line)?;
+
+        Ok(Some((Value::SimpleString(str), len + 1)))
+    } else {
+        Ok(None)
+    }
 }
 
 fn decode_array(buffer: BytesMut) -> Result<Option<(Value, usize)>> {
